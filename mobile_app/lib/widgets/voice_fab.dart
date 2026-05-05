@@ -7,27 +7,31 @@ class VoiceFab extends StatelessWidget {
   const VoiceFab({super.key});
 
   Future<void> _handleVoiceInput(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.audio,
     );
 
+    if (!context.mounted) return;
+
     if (result != null) {
-      // In a real app, you would upload this file to your backend
-      // or process it locally using Gemini.
-      // For now, we show a loading indicator and then refresh the tasks.
-      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Processing voice input...')),
       );
 
-      // Simulate a delay for AI processing
-      await Future.delayed(const Duration(seconds: 3));
-
-      // Refresh tasks
-      if (context.mounted) {
-        await Provider.of<TaskProvider>(context, listen: false).fetchTasks();
+      if (!context.mounted) return;
+      
+      try {
+        await Provider.of<TaskProvider>(context, listen: false)
+            .processVoiceInput(result.files.single.path!);
+            
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Tasks updated from voice!')),
+        );
+      } catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error processing voice: $e'), backgroundColor: Colors.redAccent),
         );
       }
     }

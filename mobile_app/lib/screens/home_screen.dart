@@ -5,6 +5,7 @@ import 'package:animate_do/animate_do.dart';
 import '../providers/task_provider.dart';
 import '../widgets/subject_card.dart';
 import '../widgets/voice_fab.dart';
+import 'subject_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,9 +18,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => 
-      Provider.of<TaskProvider>(context, listen: false).fetchTasks()
-    );
+    Future.microtask(() {
+      if (!mounted) return;
+      Provider.of<TaskProvider>(context, listen: false).fetchTasks();
+    });
   }
 
   final List<String> subjects = [
@@ -112,7 +114,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               subject: subject,
                               taskCount: taskCount,
                               onTap: () {
-                                // Navigate to Subject Detail
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SubjectDetailScreen(subject: subject),
+                                  ),
+                                );
                               },
                             ),
                           );

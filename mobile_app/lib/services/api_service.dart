@@ -40,4 +40,14 @@ class ApiService {
       throw Exception('Failed to load tasks for $subject');
     }
   }
+  Future<void> uploadVoiceInput(String filePath) async {
+    var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/process-voice/'));
+    request.files.add(await http.MultipartFile.fromPath('file', filePath));
+
+    var response = await request.send();
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to process voice input');
+    }
+  }
 }

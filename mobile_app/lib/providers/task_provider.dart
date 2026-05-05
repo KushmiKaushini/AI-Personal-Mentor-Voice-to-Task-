@@ -37,4 +37,19 @@ class TaskProvider with ChangeNotifier {
   List<Task> getTasksBySubject(String subject) {
     return _tasks.where((task) => task.subject == subject).toList();
   }
+
+  Future<void> processVoiceInput(String filePath) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _apiService.uploadVoiceInput(filePath);
+      await fetchTasks();
+    } catch (e) {
+      debugPrint('Error processing voice: $e');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }
