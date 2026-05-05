@@ -131,18 +131,18 @@ class _VoiceFabState extends State<VoiceFab> with SingleTickerProviderStateMixin
                 shape: BoxShape.circle,
                 gradient: _isRecording
                     ? const LinearGradient(
-                        colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
+                        colors: [Color(0xFFEF4444), Color(0xFF991B1B)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
                     : const LinearGradient(
-                        colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                        colors: [Color(0xFF6366F1), Color(0xFF10B981)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                 boxShadow: [
                   BoxShadow(
-                    color: (_isRecording ? Colors.red : Colors.blue).withOpacity(0.4),
+                    color: (_isRecording ? Colors.red : const Color(0xFF6366F1)).withOpacity(0.4),
                     blurRadius: _isRecording ? 25 * _pulseAnimation.value : 20,
                     spreadRadius: _isRecording ? 8 * _pulseAnimation.value : 5,
                   ),

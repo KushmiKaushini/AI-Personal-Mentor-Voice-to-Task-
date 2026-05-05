@@ -44,12 +44,12 @@ class SubjectCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: theme.colorScheme.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.book_outlined,
-                color: isDark ? Colors.blueAccent : Colors.blue,
+                color: theme.colorScheme.primary,
               ),
             ),
             const SizedBox(height: 8),
