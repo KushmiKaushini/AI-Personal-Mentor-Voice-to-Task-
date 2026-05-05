@@ -90,15 +90,14 @@ class SubjectDetailScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                  )
-                : ListView.builder(
+                                  : ListView.builder(
                     padding: const EdgeInsets.all(20),
                     itemCount: subjectTasks.length,
                     itemBuilder: (context, index) {
                       final task = subjectTasks[index];
                       return FadeInUp(
                         delay: Duration(milliseconds: 50 * index),
-                        child: _buildTaskTile(context, task),
+                        child: _buildDismissibleTask(context, task, taskProvider),
                       );
                     },
                   ),
@@ -108,15 +107,92 @@ class SubjectDetailScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildDismissibleTask(BuildContext context, Task task, TaskProvider taskProvider) {
+    return Dismissible(
+      key: Key(task.id.toString()),
+      direction: DismissDirection.horizontal,
+      onDismissed: (direction) {
+        if (direction == DismissDirection.startToEnd) {
+          taskProvider.updateTaskStatus(task.id!, 'completed');
+        } else {
+          taskProvider.deleteTask(task.id!);
+        }
+      },
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.endToStart) {
+          return await showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text("Confirm"),
+                content: const Text("Are you sure you want to delete this task?"),
+                actions: <Widget>[
+                  TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("CANCEL")),
+                  TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text("DELETE", style: TextStyle(color: Colors.red))),
+                ],
+              );
+            },
+          );
+        }
+        return true;
+      },
+      background: _buildSwipeBackground(
+        color: Colors.green,
+        alignment: Alignment.centerLeft,
+        icon: Icons.check_circle,
+        label: 'Complete',
+      ),
+      secondaryBackground: _buildSwipeBackground(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        icon: Icons.delete,
+        label: 'Delete',
+      ),
+      child: _buildTaskTile(context, task),
+    );
+  }
+
+  Widget _buildSwipeBackground({
+    required Color color,
+    required Alignment alignment,
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      alignment: alignment,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (alignment == Alignment.centerLeft) ...[
+            Icon(icon, color: color),
+            const SizedBox(width: 8),
+            Text(label, style: GoogleFonts.outfit(color: color, fontWeight: FontWeight.bold)),
+          ] else ...[
+            Text(label, style: GoogleFonts.outfit(color: color, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 8),
+            Icon(icon, color: color),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildTaskTile(BuildContext context, Task task) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isCompleted = task.status == 'completed';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: isCompleted ? theme.colorScheme.surface.withOpacity(0.5) : theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
@@ -129,52 +205,57 @@ class SubjectDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  task.taskName,
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: theme.textTheme.bodyLarge?.color,
-                  ),
-                ),
-              ),
-              if (task.deadline != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+      child: Opacity(
+        opacity: isCompleted ? 0.5 : 1.0,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
                   child: Text(
-                    task.deadline!,
+                    task.taskName,
                     style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: isDark ? Colors.blueAccent : Colors.blue,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.textTheme.bodyLarge?.color,
+                      decoration: isCompleted ? TextDecoration.lineThrough : null,
                     ),
                   ),
                 ),
-            ],
-          ),
-          if (task.description != null && task.description!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              task.description!,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
-                height: 1.5,
-              ),
+                if (task.deadline != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isCompleted ? Colors.grey.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      task.deadline!,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: isCompleted ? Colors.grey : (isDark ? Colors.blueAccent : Colors.blue),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
             ),
+            if (task.description != null && task.description!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                task.description!,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                  height: 1.5,
+                  decoration: isCompleted ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

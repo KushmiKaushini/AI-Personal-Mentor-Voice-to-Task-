@@ -24,6 +24,20 @@ class Task(TaskCreate):
     class Config:
         orm_mode = True
 
+@app.get("/subjects/")
+def get_subjects():
+    return [
+        "Software Engineering",
+        "Data Structures & Algorithms",
+        "Database Management Systems",
+        "Computer Networks",
+        "Operating Systems",
+        "Artificial Intelligence",
+        "Web Development",
+        "Cyber Security",
+        "General Study"
+    ]
+
 @app.post("/tasks/", response_model=Task)
 def create_task(task: TaskCreate, db: Session = Depends(database.get_db)):
     db_task = models.Task(**task.dict())
@@ -41,6 +55,26 @@ def read_tasks(skip: int = 0, limit: int = 100, db: Session = Depends(database.g
 def read_tasks_by_subject(subject: str, db: Session = Depends(database.get_db)):
     tasks = db.query(models.Task).filter(models.Task.subject == subject).all()
     return tasks
+
+@app.patch("/tasks/{task_id}", response_model=Task)
+def update_task_status(task_id: int, status: str, db: Session = Depends(database.get_db)):
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    db_task.status = status
+    db.commit()
+    db.refresh(db_task)
+    return db_task
+
+@app.delete("/tasks/{task_id}")
+def delete_task(task_id: int, db: Session = Depends(database.get_db)):
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    db.delete(db_task)
+    db.commit()
+    return {"message": "Task deleted successfully"}
+
 @app.post("/process-voice/")
 async def process_voice(file: UploadFile = File(...), db: Session = Depends(database.get_db)):
     # Create temp directory if it doesn't exist
@@ -56,9 +90,6 @@ async def process_voice(file: UploadFile = File(...), db: Session = Depends(data
         # Extract tasks using Gemini
         extracted_tasks = process_voice_input(file_path)
         
-        # Sync tasks to backend (using internal logic or just adding to DB)
-        # Instead of calling sync_tasks_to_backend (which calls another API), 
-        # let's just add them directly to DB here for efficiency
         created_tasks = []
         for task_data in extracted_tasks:
             db_task = models.Task(**task_data)

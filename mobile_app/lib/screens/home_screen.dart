@@ -21,27 +21,16 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     Future.microtask(() {
       if (!mounted) return;
-      Provider.of<TaskProvider>(context, listen: false).fetchTasks();
+      Provider.of<TaskProvider>(context, listen: false).initialize();
     });
   }
-
-  final List<String> subjects = [
-    "Software Engineering",
-    "Data Structures & Algorithms",
-    "Database Management Systems",
-    "Computer Networks",
-    "Operating Systems",
-    "Artificial Intelligence",
-    "Web Development",
-    "Cyber Security",
-    "General Study"
-  ];
 
   @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final theme = Theme.of(context);
+    final subjects = taskProvider.subjects;
     
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -121,38 +110,45 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  taskProvider.isLoading 
+                  taskProvider.isLoading && subjects.isEmpty
                     ? const Center(child: CircularProgressIndicator())
-                    : GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 1.0,
+                    : subjects.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No subjects found. Check your connection.',
+                            style: GoogleFonts.outfit(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5)),
+                          ),
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 1.0,
+                          ),
+                          itemCount: subjects.length,
+                          itemBuilder: (context, index) {
+                            final subject = subjects[index];
+                            final taskCount = taskProvider.getTasksBySubject(subject).length;
+                            return FadeInUp(
+                              delay: Duration(milliseconds: 50 * index),
+                              child: SubjectCard(
+                                subject: subject,
+                                taskCount: taskCount,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SubjectDetailScreen(subject: subject),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
                         ),
-                        itemCount: subjects.length,
-                        itemBuilder: (context, index) {
-                          final subject = subjects[index];
-                          final taskCount = taskProvider.getTasksBySubject(subject).length;
-                          return FadeInUp(
-                            delay: Duration(milliseconds: 50 * index),
-                            child: SubjectCard(
-                              subject: subject,
-                              taskCount: taskCount,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SubjectDetailScreen(subject: subject),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
                   const SizedBox(height: 100), // Space for FAB
                 ],
               ),
