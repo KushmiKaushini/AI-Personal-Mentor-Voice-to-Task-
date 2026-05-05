@@ -2,9 +2,14 @@ import os
 import google.generativeai as genai
 import json
 import requests
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Configure Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Configure Gemini
 GENAI_API_KEY = os.getenv("GENAI_API_KEY")
@@ -25,23 +30,33 @@ SUBJECTS = [
     "Operating Systems",
     "Artificial Intelligence",
     "Web Development",
-    "Cyber Security"
+    "Cyber Security",
+    "General Study" # Added as fallback
 ]
 
 def process_voice_input(audio_file_path):
     """
     Processes audio file using Gemini to extract study tasks and deadlines.
     """
+    logger.info(f"Processing audio file: {audio_file_path}")
     model = genai.GenerativeModel('gemini-1.5-flash')
     
     # Upload the audio file to Gemini
-    with open(audio_file_path, "rb") as f:
-        audio_data = f.read()
+    try:
+        with open(audio_file_path, "rb") as f:
+            audio_data = f.read()
+            
+        if not audio_data:
+            logger.error("Audio file is empty")
+            return []
+    except Exception as e:
+        logger.error(f"Error reading audio file: {e}")
+        return []
     
     # Determine MIME type
     mime_type = "audio/mp3" # default
     if audio_file_path.endswith(".m4a"):
-        mime_type = "audio/mp4" # Gemini uses audio/mp4 for m4a
+        mime_type = "audio/mp4" 
     elif audio_file_path.endswith(".wav"):
         mime_type = "audio/wav"
     elif audio_file_path.endswith(".aac"):
@@ -53,34 +68,55 @@ def process_voice_input(audio_file_path):
     
     Valid Subjects: {", ".join(SUBJECTS)}
     
-    Output the result in a strict JSON format as a list of objects:
+    Output the result in a STRICT JSON format as a list of objects.
+    Example Output:
     [
         {{"subject": "Subject Name", "task_name": "Task Title", "description": "Short description", "deadline": "YYYY-MM-DD or relative time"}}
     ]
     
-    Only include tasks for the valid subjects listed above. If a subject isn't mentioned clearly, try to map it to the closest valid subject.
+    CRITICAL RULES:
+    1. Every task MUST be mapped to one of the Valid Subjects listed above.
+    2. If a subject isn't clearly mentioned, map it to the most relevant one.
+    3. If it doesn't fit any specific technical subject, use 'General Study'.
+    4. Do NOT omit any tasks mentioned in the audio.
+    5. Return ONLY the JSON list. No conversational text.
     """
     
-    # Passing the prompt and audio data
-    response = model.generate_content([
-        prompt,
-        {"mime_type": mime_type, "data": audio_data}
-    ])
-    
     try:
-        # Extract JSON from the response text
-        # Gemini might wrap it in markdown code blocks
+        # Passing the prompt and audio data
+        response = model.generate_content([
+            prompt,
+            {"mime_type": mime_type, "data": audio_data}
+        ])
+        
         text_content = response.text
+        logger.info(f"Gemini Raw Response: {text_content}")
+        
+        # Robust JSON extraction
+        json_str = text_content
         if "```json" in text_content:
             json_str = text_content.split("```json")[1].split("```")[0].strip()
-        else:
-            json_str = text_content.strip()
+        elif "```" in text_content:
+            json_str = text_content.split("```")[1].split("```")[0].strip()
             
+        # Remove any non-json characters if they exist
+        json_str = json_str.strip()
+        if not (json_str.startswith('[') or json_str.startswith('{')):
+            # Try to find the first [ and last ]
+            start = json_str.find('[')
+            end = json_str.rfind(']') + 1
+            if start != -1 and end != 0:
+                json_str = json_str[start:end]
+
         tasks = json.loads(json_str)
+        
+        # Ensure it's a list
+        if isinstance(tasks, dict):
+            tasks = [tasks]
+            
         return tasks
     except Exception as e:
-        print(f"Error parsing Gemini response: {e}")
-        print(f"Raw Response: {response.text}")
+        logger.error(f"Error parsing Gemini response: {e}")
         return []
 
 def sync_tasks_to_backend(tasks):
@@ -91,13 +127,13 @@ def sync_tasks_to_backend(tasks):
     for task in tasks:
         try:
             response = requests.post(BACKEND_URL, json=task)
-            if response.status_code == 200 or response.status_code == 201:
-                print(f"Successfully synced: {task['task_name']}")
+            if response.status_code in [200, 201]:
+                logger.info(f"Successfully synced: {task.get('task_name')}")
                 synced_count += 1
             else:
-                print(f"Failed to sync {task['task_name']}: {response.text}")
+                logger.error(f"Failed to sync {task.get('task_name')}: {response.text}")
         except Exception as e:
-            print(f"Error calling backend API: {e}")
+            logger.error(f"Error calling backend API: {e}")
             
     return synced_count
 

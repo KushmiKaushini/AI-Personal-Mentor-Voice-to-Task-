@@ -14,28 +14,39 @@ class SubjectDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
     final subjectTasks = taskProvider.getTasksBySubject(subject);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           subject,
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: theme.appBarTheme.iconTheme?.color,
+          ),
         ),
-        backgroundColor: const Color(0xFF1E293B),
-        elevation: 0,
+        centerTitle: true,
       ),
       body: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(24),
             width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1E293B),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(32),
                 bottomRight: Radius.circular(32),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +56,7 @@ class SubjectDetailScreen extends StatelessWidget {
                   style: GoogleFonts.outfit(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: theme.textTheme.bodyLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -53,7 +64,7 @@ class SubjectDetailScreen extends StatelessWidget {
                   'You have ${subjectTasks.length} active tasks for this subject.',
                   style: GoogleFonts.outfit(
                     fontSize: 16,
-                    color: Colors.white70,
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -65,23 +76,29 @@ class SubjectDetailScreen extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.task_alt, size: 64, color: Colors.white10),
+                        Icon(
+                          Icons.task_alt,
+                          size: 64,
+                          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.1),
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'No tasks found',
-                          style: GoogleFonts.outfit(color: Colors.white38),
+                          style: GoogleFonts.outfit(
+                            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                          ),
                         ),
                       ],
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     itemCount: subjectTasks.length,
                     itemBuilder: (context, index) {
                       final task = subjectTasks[index];
                       return FadeInUp(
-                        delay: Duration(milliseconds: 100 * index),
-                        child: _buildTaskTile(task),
+                        delay: Duration(milliseconds: 50 * index),
+                        child: _buildTaskTile(context, task),
                       );
                     },
                   ),
@@ -91,14 +108,26 @@ class SubjectDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTaskTile(Task task) {
+  Widget _buildTaskTile(BuildContext context, Task task) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,22 +141,22 @@ class SubjectDetailScreen extends StatelessWidget {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: theme.textTheme.bodyLarge?.color,
                   ),
                 ),
               ),
               if (task.deadline != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     task.deadline!,
                     style: GoogleFonts.outfit(
                       fontSize: 12,
-                      color: Colors.orangeAccent,
+                      color: isDark ? Colors.blueAccent : Colors.blue,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -135,12 +164,13 @@ class SubjectDetailScreen extends StatelessWidget {
             ],
           ),
           if (task.description != null && task.description!.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               task.description!,
               style: GoogleFonts.outfit(
                 fontSize: 14,
-                color: Colors.white60,
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                height: 1.5,
               ),
             ),
           ],

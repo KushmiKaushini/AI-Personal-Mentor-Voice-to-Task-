@@ -13,13 +13,29 @@ class VoiceFab extends StatefulWidget {
   State<VoiceFab> createState() => _VoiceFabState();
 }
 
-class _VoiceFabState extends State<VoiceFab> {
+class _VoiceFabState extends State<VoiceFab> with SingleTickerProviderStateMixin {
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecording = false;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
 
   @override
   void dispose() {
     _audioRecorder.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -100,41 +116,49 @@ class _VoiceFabState extends State<VoiceFab> {
 
   @override
   Widget build(BuildContext context) {
-    return FloatingActionButton.large(
-      onPressed: _toggleRecording,
-      backgroundColor: _isRecording ? Colors.redAccent : Colors.blueAccent,
-      child: Container(
-        width: 96,
-        height: 96,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: _isRecording
-              ? const LinearGradient(
-                  colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : const LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _isRecording ? _pulseAnimation.value : 1.0,
+          child: FloatingActionButton.large(
+            onPressed: _toggleRecording,
+            backgroundColor: _isRecording ? Colors.redAccent : Colors.blueAccent,
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: _isRecording
+                    ? const LinearGradient(
+                        colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : const LinearGradient(
+                        colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (_isRecording ? Colors.red : Colors.blue).withOpacity(0.4),
+                    blurRadius: _isRecording ? 25 * _pulseAnimation.value : 20,
+                    spreadRadius: _isRecording ? 8 * _pulseAnimation.value : 5,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  _isRecording ? Icons.stop : Icons.mic,
+                  color: Colors.white,
+                  size: 36,
                 ),
-          boxShadow: [
-            BoxShadow(
-              color: (_isRecording ? Colors.red : Colors.blue).withOpacity(0.4),
-              blurRadius: 20,
-              spreadRadius: 5,
+              ),
             ),
-          ],
-        ),
-        child: Center(
-          child: Icon(
-            _isRecording ? Icons.stop : Icons.mic,
-            color: Colors.white,
-            size: 36,
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
