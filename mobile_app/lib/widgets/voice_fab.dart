@@ -1,58 +1,138 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 
-class VoiceFab extends StatelessWidget {
+class VoiceFab extends StatefulWidget {
   const VoiceFab({super.key});
 
-  Future<void> _handleVoiceInput(BuildContext context) async {
-    final result = await FilePicker.pickFiles(
-      type: FileType.audio,
-    );
+  @override
+  State<VoiceFab> createState() => _VoiceFabState();
+}
 
-    if (!context.mounted) return;
+class _VoiceFabState extends State<VoiceFab> {
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  bool _isRecording = false;
 
-    if (result != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Processing voice input...')),
-      );
+  @override
+  void dispose() {
+    _audioRecorder.dispose();
+    super.dispose();
+  }
 
-      if (!context.mounted) return;
-      
-      try {
-        await Provider.of<TaskProvider>(context, listen: false)
-            .processVoiceInput(result.files.single.path!);
-            
-        if (!context.mounted) return;
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      await _stopRecording();
+    } else {
+      await _startRecording();
+    }
+  }
+
+  Future<void> _startRecording() async {
+    try {
+      if (await Permission.microphone.request().isGranted) {
+        final directory = await getTemporaryDirectory();
+        final path = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+        const config = RecordConfig();
+
+        await _audioRecorder.start(config, path: path);
+
+        setState(() {
+          _isRecording = true;
+        });
+      } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tasks updated from voice!')),
-        );
-      } catch (e) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error processing voice: $e'), backgroundColor: Colors.redAccent),
+          const SnackBar(content: Text('Microphone permission denied')),
         );
       }
+    } catch (e) {
+      debugPrint('Error starting recording: $e');
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stop();
+
+      setState(() {
+        _isRecording = false;
+      });
+
+      if (path != null) {
+        if (!mounted) return;
+        _processVoice(path);
+      }
+    } catch (e) {
+      debugPrint('Error stopping recording: $e');
+    }
+  }
+
+  Future<void> _processVoice(String path) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Processing voice input...')),
+    );
+
+    try {
+      await Provider.of<TaskProvider>(context, listen: false).processVoiceInput(path);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tasks updated from voice!')),
+      );
+
+      // Delete the temporary file
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error processing voice: $e'), backgroundColor: Colors.redAccent),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return FloatingActionButton.large(
-      onPressed: () => _handleVoiceInput(context),
-      backgroundColor: Colors.blueAccent,
+      onPressed: _toggleRecording,
+      backgroundColor: _isRecording ? Colors.redAccent : Colors.blueAccent,
       child: Container(
-        decoration: const BoxDecoration(
+        width: 96,
+        height: 96,
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: _isRecording
+              ? const LinearGradient(
+                  colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+          boxShadow: [
+            BoxShadow(
+              color: (_isRecording ? Colors.red : Colors.blue).withOpacity(0.4),
+              blurRadius: 20,
+              spreadRadius: 5,
+            ),
+          ],
         ),
-        child: const Center(
-          child: Icon(Icons.mic, color: Colors.white, size: 36),
+        child: Center(
+          child: Icon(
+            _isRecording ? Icons.stop : Icons.mic,
+            color: Colors.white,
+            size: 36,
+          ),
         ),
       ),
     );

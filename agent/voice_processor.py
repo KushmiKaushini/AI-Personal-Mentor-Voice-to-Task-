@@ -35,10 +35,18 @@ def process_voice_input(audio_file_path):
     model = genai.GenerativeModel('gemini-1.5-flash')
     
     # Upload the audio file to Gemini
-    # Note: For real-time or large files, use genai.upload_file
     with open(audio_file_path, "rb") as f:
         audio_data = f.read()
     
+    # Determine MIME type
+    mime_type = "audio/mp3" # default
+    if audio_file_path.endswith(".m4a"):
+        mime_type = "audio/mp4" # Gemini uses audio/mp4 for m4a
+    elif audio_file_path.endswith(".wav"):
+        mime_type = "audio/wav"
+    elif audio_file_path.endswith(".aac"):
+        mime_type = "audio/aac"
+
     prompt = f"""
     You are an AI Study Assistant for IT undergraduates. 
     Listen to the provided audio and extract 'Study Tasks' and 'Deadlines'.
@@ -54,10 +62,9 @@ def process_voice_input(audio_file_path):
     """
     
     # Passing the prompt and audio data
-    # In Gemini 1.5 Flash, we can pass audio as a part of the contents
     response = model.generate_content([
         prompt,
-        {"mime_type": "audio/mp3", "data": audio_data} # Assuming mp3, adjust as needed
+        {"mime_type": mime_type, "data": audio_data}
     ])
     
     try:

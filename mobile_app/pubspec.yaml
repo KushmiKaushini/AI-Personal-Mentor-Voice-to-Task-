@@ -1,4 +1,4 @@
-name: mobile_app
+name: ai_personal_mentor
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -41,6 +41,9 @@ dependencies:
   animate_do: ^5.1.0
   shimmer: ^3.0.0
   provider: ^6.1.5+1
+  record: ^6.2.0
+  path_provider: ^2.1.5
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:
