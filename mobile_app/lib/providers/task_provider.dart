@@ -78,14 +78,15 @@ class TaskProvider with ChangeNotifier {
       
       final index = _tasks.indexWhere((t) => t.id == id);
       if (index != -1) {
+        final originalTask = _tasks[index];
         _tasks[index] = Task(
-          id: _tasks[index].id,
-          subject: _tasks[index].subject,
-          task_name: _tasks[index].task_name,
-          description: _tasks[index].description,
-          deadline: _tasks[index].deadline,
+          id: originalTask.id,
+          subject: originalTask.subject,
+          taskName: originalTask.taskName,
+          description: originalTask.description,
+          deadline: originalTask.deadline,
           status: status,
-          created_at: _tasks[index].created_at,
+          createdAt: originalTask.createdAt,
         );
         notifyListeners();
       }

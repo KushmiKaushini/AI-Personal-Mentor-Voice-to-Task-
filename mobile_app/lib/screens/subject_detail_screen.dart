@@ -90,7 +90,8 @@ class SubjectDetailScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                                  : ListView.builder(
+                  )
+                : ListView.builder(
                     padding: const EdgeInsets.all(20),
                     itemCount: subjectTasks.length,
                     itemBuilder: (context, index) {

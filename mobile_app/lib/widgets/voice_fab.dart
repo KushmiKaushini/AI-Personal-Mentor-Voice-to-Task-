@@ -6,6 +6,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 
+// Supported audio formats for voice processing
+const List<String> supportedAudioExtensions = [
+  '.m4a',
+  '.mp3',
+  '.wav',
+  '.aac',
+];
+
 class VoiceFab extends StatefulWidget {
   const VoiceFab({super.key});
 
@@ -81,7 +89,19 @@ class _VoiceFabState extends State<VoiceFab> with SingleTickerProviderStateMixin
 
       if (path != null) {
         if (!mounted) return;
-        _processVoice(path);
+        // Validate audio format before processing
+        final extension = File(path).path.split('.').last.toLowerCase();
+        if (supportedAudioExtensions.contains('.$extension')) {
+          _processVoice(path);
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Unsupported audio format: .$extension'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error stopping recording: $e');

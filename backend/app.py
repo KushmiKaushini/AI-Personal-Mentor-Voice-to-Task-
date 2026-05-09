@@ -1,13 +1,27 @@
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 from . import models, database
 from pydantic import BaseModel
 import shutil
 import os
-from agent.voice_processor import process_voice_input, sync_tasks_to_backend
+import logging
+from agent.voice_processor import process_voice_input
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AI Personal Mentor Backend")
+
+# Configure CORS - allows all origins for development, restrict in production
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize database
 database.init_db()
